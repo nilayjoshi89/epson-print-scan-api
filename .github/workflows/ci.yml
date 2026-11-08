@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.13.6"
+      - run: uv run --directory source --locked ruff format --check
+      - run: uv run --directory source --locked ruff check
+      - run: uv run --directory source --locked mypy
+      - run: uv run --directory source --locked pytest
+      - run: docker build -t epson-api .

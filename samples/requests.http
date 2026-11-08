@@ -1,0 +1,86 @@
+@host = http://localhost:8000
+@apiKey = replace-with-your-api-key
+@printerIp = 192.168.0.64
+
+### Printer, queue and scanner status
+GET {{host}}/status?printer_ip={{printerIp}}
+X-API-Key: {{apiKey}}
+
+### Scan the full flatbed at the default 300 dpi as PNG
+POST {{host}}/scan
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "printer_ip": "{{printerIp}}"
+}
+
+### Scan an A4 page to PDF at 600 dpi
+POST {{host}}/scan
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "printer_ip": "{{printerIp}}",
+  "resolution": 600,
+  "format": "pdf",
+  "paper_size": "A4"
+}
+
+### Scan a custom 100 x 150 mm area in grayscale JPEG
+POST {{host}}/scan
+X-API-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "printer_ip": "{{printerIp}}",
+  "mode": "Gray",
+  "format": "jpeg",
+  "paper_size": "custom",
+  "width_mm": 100,
+  "height_mm": 150
+}
+
+### Print a text file with default settings
+POST {{host}}/print
+X-API-Key: {{apiKey}}
+Content-Type: multipart/form-data; boundary=demo
+
+--demo
+Content-Disposition: form-data; name="printer_ip"
+
+{{printerIp}}
+--demo
+Content-Disposition: form-data; name="file"; filename="hello.txt"
+Content-Type: text/plain
+
+< ./hello.txt
+--demo--
+
+### Print in mono at high quality, pages per sheet set to 2
+POST {{host}}/print
+X-API-Key: {{apiKey}}
+Content-Type: multipart/form-data; boundary=demo
+
+--demo
+Content-Disposition: form-data; name="printer_ip"
+
+{{printerIp}}
+--demo
+Content-Disposition: form-data; name="ink"
+
+MONO
+--demo
+Content-Disposition: form-data; name="quality"
+
+HIGH
+--demo
+Content-Disposition: form-data; name="number_up"
+
+2
+--demo
+Content-Disposition: form-data; name="file"; filename="hello.txt"
+Content-Type: text/plain
+
+< ./hello.txt
+--demo--

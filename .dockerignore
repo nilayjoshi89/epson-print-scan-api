@@ -1,0 +1,7 @@
+*
+!entrypoint.sh
+!driver/*.deb
+!source/epson_api
+!source/pyproject.toml
+!source/uv.lock
+**/__pycache__

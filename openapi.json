@@ -1,0 +1,913 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Epson print and scan API",
+    "description": "Print to and scan from Epson printers on a local network. Each request names the printer by its private IPv4 address in `printer_ip`, so one server can drive several printers. Send the API key in the `X-API-Key` header on every request. Check `/status` first to confirm a printer is reachable. `/scan` and `/print` act on real hardware. This specification is available without an API key at `/openapi.json`.",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/scan": {
+      "post": {
+        "tags": [
+          "Scanning"
+        ],
+        "summary": "Scan a document and return the file",
+        "description": "Scans from the flatbed and returns the file as the response body. The server keeps no copy, so save the response. Place the original against the top-left corner of the glass. A 600 dpi full-page color PNG takes about 3 minutes and is around 50 MB, so use a client timeout of at least 10 minutes. Only one scan can run per printer. Scanning uses the real device.",
+        "operationId": "scan_document",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The scanned file, in the requested format.",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/tiff": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The `X-API-Key` header is missing or wrong.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client address isn't in the server's `ALLOWED_IPS` list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A scan is already running on this printer. Retry when it finishes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A field is invalid, or the driver doesn't offer an option.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The printer, scanner or CUPS reported a failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "The operation passed its time limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ]
+      }
+    },
+    "/print": {
+      "post": {
+        "tags": [
+          "Printing"
+        ],
+        "summary": "Print an uploaded document",
+        "description": "Queues a document on the printer and returns its job identifier. The print queue for an address is created on first use. Every option has a default, and options are checked against the selected model's driver. Success means the job was accepted. Use `/status` to follow unfinished jobs. Printing uses real paper and ink.",
+        "operationId": "print_document",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_print_document"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrintResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The `X-API-Key` header is missing or wrong.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client address isn't in the server's `ALLOWED_IPS` list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The file is larger than the configured upload limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "The file is empty or isn't a supported type.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A field is invalid, or the driver doesn't offer an option.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The printer, scanner or CUPS reported a failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "The operation passed its time limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ]
+      }
+    },
+    "/status": {
+      "get": {
+        "tags": [
+          "Status"
+        ],
+        "summary": "Get printer, queue and scanner status",
+        "description": "Reports the printer's own state over IPP, its CUPS queue with unfinished jobs, and the scanner. Field names follow the IPP standard. This is read-only and uses no paper or ink. Optional printer fields appear only when the printer reports them.",
+        "operationId": "get_device_status",
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "printer_ip",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "ipv4",
+              "description": "Private LAN IPv4 address of the printer. Public, loopback and link-local addresses are rejected.",
+              "title": "Printer Ip"
+            },
+            "description": "Private LAN IPv4 address of the printer. Public, loopback and link-local addresses are rejected."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "The `X-API-Key` header is missing or wrong.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The client address isn't in the server's `ALLOWED_IPS` list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A field is invalid, or the driver doesn't offer an option.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_print_document": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "Document to print, identified by its content. Supported types are PDF, PostScript, plain text, PNG, JPEG, TIFF, GIF, BMP, PNM and SVG. Convert anything else to PDF first."
+          },
+          "printer_ip": {
+            "type": "string",
+            "format": "ipv4",
+            "title": "Printer Ip",
+            "description": "Private LAN IPv4 address of the printer. Public, loopback and link-local addresses are rejected."
+          },
+          "model": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.+-]+$",
+            "title": "Model",
+            "description": "Epson model name from an installed driver file, as in `Epson-<model>-*.ppd.gz`.",
+            "default": "L3250_Series"
+          },
+          "copies": {
+            "type": "integer",
+            "maximum": 99.0,
+            "minimum": 1.0,
+            "title": "Copies",
+            "description": "Number of copies.",
+            "default": 1
+          },
+          "paper_type": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.+-]+$",
+            "title": "Paper Type",
+            "description": "Driver paper code. For the L3250: `PLAIN`, `SFINE`, `PMMATT`, `PLATINA`, `PMPHOTO`, `PSGLOS`, `LCPP` or `ENV`.",
+            "default": "PLAIN"
+          },
+          "quality": {
+            "type": "string",
+            "enum": [
+              "HIGH",
+              "NORMAL",
+              "DRAFT"
+            ],
+            "title": "Quality",
+            "description": "Print quality. `DRAFT` exists only for `PMPHOTO`, `PSGLOS` and `LCPP` on the L3250.",
+            "default": "NORMAL"
+          },
+          "ink": {
+            "type": "string",
+            "enum": [
+              "COLOR",
+              "MONO"
+            ],
+            "title": "Ink",
+            "description": "Color or black-only printing.",
+            "default": "COLOR"
+          },
+          "page_size": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_.+-]+$",
+            "title": "Page Size",
+            "description": "Driver page size code. For the L3250: `A4`, `A5`, `A6`, `B5`, `B6`, `Letter`, `Legal`, `16K`, `8x10`, `L`, `2L`, `TL`, `INDEX5`, `4X6FULL`, `T4X6FULL`, `4X7`, `T4X7`, `Postcard`, `TPostcard`, `ENV10`, `EnvDL` or `ENVC6`.",
+            "default": "A4"
+          },
+          "brightness": {
+            "type": "integer",
+            "maximum": 25.0,
+            "minimum": -25.0,
+            "title": "Brightness",
+            "description": "Brightness. Adjustment from -25 to 25, where 0 leaves the output unchanged.",
+            "default": 0
+          },
+          "contrast": {
+            "type": "integer",
+            "maximum": 25.0,
+            "minimum": -25.0,
+            "title": "Contrast",
+            "description": "Contrast. Adjustment from -25 to 25, where 0 leaves the output unchanged.",
+            "default": 0
+          },
+          "saturation": {
+            "type": "integer",
+            "maximum": 25.0,
+            "minimum": -25.0,
+            "title": "Saturation",
+            "description": "Saturation. Adjustment from -25 to 25, where 0 leaves the output unchanged.",
+            "default": 0
+          },
+          "page_ranges": {
+            "type": "string",
+            "pattern": "^(all|\\d+(-\\d*)?(,\\d+(-\\d*)?)*)$",
+            "title": "Page Ranges",
+            "description": "`all`, or a list such as `1-3,5,8-`.",
+            "default": "all"
+          },
+          "orientation": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "portrait",
+              "landscape",
+              "reverse_landscape",
+              "reverse_portrait"
+            ],
+            "title": "Orientation",
+            "description": "Page orientation. `auto` keeps the document's own.",
+            "default": "auto"
+          },
+          "number_up": {
+            "type": "integer",
+            "title": "Number Up",
+            "description": "Pages per sheet: 1, 2, 4, 6, 9 or 16.",
+            "default": 1
+          },
+          "fit_to_page": {
+            "type": "boolean",
+            "title": "Fit To Page",
+            "description": "Scale the content to fit the page.",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "printer_ip"
+        ],
+        "title": "Body_print_document"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "description": "Human-readable reason for the failure."
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponse"
+      },
+      "JobSection": {
+        "properties": {
+          "job-id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job-Id",
+            "description": "Final number of the `job_id` returned by `/print`."
+          },
+          "job-name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job-Name",
+            "description": "Title of the document."
+          },
+          "job-state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job-State",
+            "description": "`pending`, `pending-held`, `processing` or `processing-stopped`."
+          },
+          "job-state-reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Job-State-Reasons",
+            "description": "IPP reason keywords for the job."
+          }
+        },
+        "type": "object",
+        "required": [
+          "job-id",
+          "job-name",
+          "job-state",
+          "job-state-reasons"
+        ],
+        "title": "JobSection"
+      },
+      "PrintResponse": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id",
+            "description": "CUPS job identifier. Success means CUPS accepted the job, not that the page has printed."
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id"
+        ],
+        "title": "PrintResponse"
+      },
+      "PrinterSection": {
+        "properties": {
+          "printer-state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Printer-State",
+            "description": "`idle`, `processing` or `stopped`. `null` when unknown."
+          },
+          "printer-state-reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Printer-State-Reasons",
+            "description": "IPP reason keywords such as `none` or `media-empty-error`."
+          },
+          "printer-is-accepting-jobs": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Printer-Is-Accepting-Jobs",
+            "description": "Whether new jobs are accepted. `null` when unknown."
+          },
+          "reachable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reachable",
+            "description": "`true` if the printer answered over IPP, `false` if not, `null` while a scan is running."
+          },
+          "printer-make-and-model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Printer-Make-And-Model"
+          },
+          "printer-alert-description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Printer-Alert-Description"
+          },
+          "marker-names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marker-Names",
+            "description": "Ink names, when reported."
+          },
+          "marker-colors": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marker-Colors",
+            "description": "Ink colors, when reported."
+          },
+          "marker-levels": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marker-Levels",
+            "description": "Ink levels, when reported."
+          }
+        },
+        "type": "object",
+        "required": [
+          "printer-state",
+          "printer-state-reasons",
+          "printer-is-accepting-jobs",
+          "reachable"
+        ],
+        "title": "PrinterSection"
+      },
+      "QueueSection": {
+        "properties": {
+          "printer-state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Printer-State",
+            "description": "`idle`, `processing` or `stopped`. `null` when unknown."
+          },
+          "printer-state-reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Printer-State-Reasons",
+            "description": "IPP reason keywords such as `none` or `media-empty-error`."
+          },
+          "printer-is-accepting-jobs": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Printer-Is-Accepting-Jobs",
+            "description": "Whether new jobs are accepted. `null` when unknown."
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "CUPS queue name. `null` until the first print to this printer."
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobSection"
+            },
+            "type": "array",
+            "title": "Jobs",
+            "description": "Unfinished jobs only."
+          }
+        },
+        "type": "object",
+        "required": [
+          "printer-state",
+          "printer-state-reasons",
+          "printer-is-accepting-jobs",
+          "name",
+          "jobs"
+        ],
+        "title": "QueueSection"
+      },
+      "ScanRequest": {
+        "properties": {
+          "printer_ip": {
+            "type": "string",
+            "format": "ipv4",
+            "title": "Printer Ip",
+            "description": "Private LAN IPv4 address of the printer. Public, loopback and link-local addresses are rejected."
+          },
+          "resolution": {
+            "type": "integer",
+            "enum": [
+              75,
+              150,
+              300,
+              600,
+              1200
+            ],
+            "title": "Resolution",
+            "description": "Scan resolution in dots per inch.",
+            "default": 300
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "Color",
+              "Gray",
+              "Lineart"
+            ],
+            "title": "Mode",
+            "description": "Color mode of the scan.",
+            "default": "Color"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "png",
+              "jpeg",
+              "tiff",
+              "pdf"
+            ],
+            "title": "Format",
+            "description": "File format of the returned scan.",
+            "default": "png"
+          },
+          "paper_size": {
+            "type": "string",
+            "enum": [
+              "full",
+              "A4",
+              "A5",
+              "B5",
+              "Letter",
+              "custom"
+            ],
+            "title": "Paper Size",
+            "description": "Area to scan, measured from the top-left corner of the glass. `full` is the whole flatbed. `B5` is the ISO size, 176 x 250 mm. `custom` requires `width_mm` and `height_mm`.",
+            "default": "full"
+          },
+          "width_mm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 215.9,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width Mm",
+            "description": "Scan width in millimetres. Required when `paper_size` is `custom`, and rejected otherwise."
+          },
+          "height_mm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 297.18,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height Mm",
+            "description": "Scan height in millimetres. Required when `paper_size` is `custom`, and rejected otherwise."
+          }
+        },
+        "type": "object",
+        "required": [
+          "printer_ip"
+        ],
+        "title": "ScanRequest",
+        "examples": [
+          {
+            "format": "pdf",
+            "paper_size": "A4",
+            "printer_ip": "192.168.0.64",
+            "resolution": 300
+          },
+          {
+            "height_mm": 150,
+            "paper_size": "custom",
+            "printer_ip": "192.168.0.64",
+            "width_mm": 100
+          }
+        ]
+      },
+      "ScannerSection": {
+        "properties": {
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "description": "SANE device name."
+          },
+          "busy": {
+            "type": "boolean",
+            "title": "Busy",
+            "description": "Whether this API is currently scanning on this printer."
+          },
+          "reachable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reachable",
+            "description": "Whether the scanner port answered. `null` while a scan is running."
+          }
+        },
+        "type": "object",
+        "required": [
+          "device",
+          "busy",
+          "reachable"
+        ],
+        "title": "ScannerSection"
+      },
+      "StatusResponse": {
+        "properties": {
+          "printer": {
+            "$ref": "#/components/schemas/PrinterSection",
+            "description": "State reported by the printer itself."
+          },
+          "queue": {
+            "$ref": "#/components/schemas/QueueSection",
+            "description": "State of this printer's CUPS queue."
+          },
+          "scanner": {
+            "$ref": "#/components/schemas/ScannerSection",
+            "description": "State of the scanner."
+          }
+        },
+        "type": "object",
+        "required": [
+          "printer",
+          "queue",
+          "scanner"
+        ],
+        "title": "StatusResponse"
+      },
+      "ValidationErrorResponse": {
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Detail",
+            "description": "A list of invalid fields, or a sentence when the driver doesn't offer the requested option."
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "ValidationErrorResponse"
+      }
+    },
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "description": "The value of `API_KEY` configured on the server.",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  }
+}

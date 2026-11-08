@@ -1,0 +1,25 @@
+[project]
+name = "epson-api"
+version = "0.1.0"
+requires-python = "==3.13.*"
+dependencies = ["fastapi", "python-multipart", "uvicorn"]
+
+[dependency-groups]
+dev = ["httpx2", "mypy", "pre-commit", "pytest", "ruff"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM", "S", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.mypy]
+files = ["epson_api"]
+strict = true
