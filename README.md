@@ -191,6 +191,10 @@ If the printer can't be reached, `printer.reachable` is `false` and its state fi
 
 The build installs every `.deb` in `driver/`, and the API finds model files at `/opt/<driver>/ppds/**/Epson-<model>-*.ppd.gz`. To use another Epson Linux driver, add its amd64 `.deb` to `driver/`, rebuild, and pass the model name in `model`. Keep only one version of each driver, and only `L3250_Series` on driver 1.8.8 has been tested on real hardware. A driver that needs extra system libraries must also have them added to the `Dockerfile`. If you publish a driver, follow its licence. Scanning doesn't use this folder.
 
+## Docker Hub
+
+Pushing a version tag such as `v1.0.0` runs the checks, then publishes the image as `<username>/epson-print-scan-api` with the tags `1.0.0` and `latest`. Set the repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` first, using a Docker Hub access token.
+
 ## OpenAPI
 
 The full specification is in [`openapi.json`](openapi.json), and a running server also provides it at `/openapi.json` without an API key, with interactive documentation at `/docs`. It describes every field, response and error, so AI agents and code generators can use it directly. After changing the API, regenerate the file with `uv run --directory source python -m epson_api.openapi_export`.
@@ -223,6 +227,18 @@ uv lock --upgrade --directory source
 - CUPS log: `docker exec epson-api tail -n 50 /var/log/cups/error_log`
 - Queues: `docker exec epson-api lpstat -t`
 - Direct scan, bypassing the API: `docker exec epson-api scanimage -d "epsonds:net:192.168.0.64" --format png --mode=Color --resolution=600 > scan.png`
+
+## Source code for the Docker image
+
+The Docker image contains open-source software under its own licences, including GPL software. Licence notices are in `/usr/share/doc/<package>/copyright` inside the image, and the Epson driver's licence is `/opt/epson-inkjet-printer-escpr/doc/COPYING`.
+
+| Component | Source |
+|---|---|
+| Epson ESC/P-R driver 1.8.10-1 | [`driver/epson-inkjet-printer-escpr-1.8.10-1.src.rpm`](driver/epson-inkjet-printer-escpr-1.8.10-1.src.rpm) in this repository |
+| Debian packages | [sources.debian.org](https://sources.debian.org/), with exact past versions at [snapshot.debian.org](https://snapshot.debian.org/) |
+| Python packages | [PyPI](https://pypi.org/), at the versions pinned in [`source/uv.lock`](source/uv.lock) |
+
+To see the exact Debian package versions in an image, run `docker run --rm --entrypoint dpkg-query <image> -W`.
 
 ## License
 
