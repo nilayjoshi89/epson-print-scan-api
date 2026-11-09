@@ -1,5 +1,17 @@
 # Epson print and scan API
 
+[![CI](https://github.com/nilayjoshi89/epson-print-scan-api/actions/workflows/ci.yml/badge.svg)](https://github.com/nilayjoshi89/epson-print-scan-api/actions/workflows/ci.yml)
+[![Docker Pulls](https://img.shields.io/docker/pulls/nilayjoshi89/epson-print-scan-api)](https://hub.docker.com/r/nilayjoshi89/epson-print-scan-api)
+[![Docker Image Version](https://img.shields.io/docker/v/nilayjoshi89/epson-print-scan-api?sort=semver)](https://hub.docker.com/r/nilayjoshi89/epson-print-scan-api)
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Shell Script](https://img.shields.io/badge/shell-bash-4EAA25?logo=gnubash&logoColor=white)](entrypoint.sh)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![mypy](https://img.shields.io/badge/mypy-strict-2A6DB2)](https://mypy-lang.org/)
+[![OpenAPI](https://img.shields.io/badge/OpenAPI-spec-6BA539?logo=openapiinitiative&logoColor=white)](openapi.json)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
+
 A container that exposes printing and scanning over HTTP for Epson printers on the network. It runs CUPS with the Epson ESC/P-R driver, SANE's `scanimage`, and a FastAPI service. The printer's IP address is passed on each request. The host must be x86_64 Linux.
 
 Scanning and printing were tested with an Epson L3250 from Docker Desktop on Windows, using driver 1.8.8. Driver 1.8.10, included here, has been tested against a simulated printer only. Other Epson models are untested.
@@ -23,11 +35,14 @@ This project is not affiliated with or endorsed by Seiko Epson Corporation.
 
 ```sh
 echo "API_KEY=$(openssl rand -hex 32)" > .env
-docker build -t epson-api .
+docker pull nilayjoshi89/epson-print-scan-api:latest
 docker network create printing
 docker run -d --name epson-api --restart unless-stopped \
-  --env-file .env --network printing -p 127.0.0.1:8000:8000 epson-api
+  --env-file .env --network printing -p 127.0.0.1:8000:8000 \
+  nilayjoshi89/epson-print-scan-api:latest
 ```
+
+To build the image from source, run `docker build -t nilayjoshi89/epson-print-scan-api:latest .` in this folder instead of `docker pull`.
 
 Other containers on the `printing` network reach it at `http://epson-api:8000`. The `-p` option publishes it to the host only. Remove it if only containers need access.
 
@@ -193,7 +208,9 @@ The build installs every `.deb` in `driver/`, and the API finds model files at `
 
 ## Docker Hub
 
-Pushing a version tag such as `v1.0.0` runs the checks, then publishes the image as `<username>/epson-print-scan-api` with the tags `1.0.0` and `latest`. Set the repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` first, using a Docker Hub access token.
+The image is published at [nilayjoshi89/epson-print-scan-api](https://hub.docker.com/r/nilayjoshi89/epson-print-scan-api).
+
+Pushing a version tag such as `v1.0.0` runs the checks, then publishes the image with the tags `1.0.0` and `latest`. To publish from a fork, set the repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` first, using a Docker Hub access token.
 
 ## OpenAPI
 
